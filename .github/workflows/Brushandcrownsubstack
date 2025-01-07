@@ -1,0 +1,49 @@
+name: Post Substack Updates to Discord
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour, adjust as needed
+  workflow_dispatch:  # Allows you to manually trigger this action
+
+jobs:
+  post-to-discord:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Get the latest post from Substack
+      run: |
+        # Install necessary dependencies
+        sudo apt-get update
+        sudo apt-get install -y curl jq
+
+        # Substack RSS feed URL
+        SUBSTACK_FEED_URL="https://<https://theclevercanvas>.substack.com/s/brush-and-crown?utm_source=substack&utm_medium=menu
+        
+        # Get the latest post's title and link using jq and curl
+        LATEST_POST=$(curl -s $SUBSTACK_FEED_URL | jq -r '.rss.channel.item[0] | {title: .title, link: .link}')
+
+        # Extract title and link
+        TITLE=$(echo $LATEST_POST | jq -r '.title')
+        LINK=$(echo $LATEST_POST | jq -r '.link')
+
+        echo "Latest Post: $TITLE"
+        echo "Link: $LINK"
+        
+        echo "::set-output name=title::$TITLE"
+        echo "::set-output name=link::$LINK"
+
+    - name: Send latest Substack post to Discord
+      run: |
+        # Discord Webhook URL
+        DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/<your-webhook-id>"
+
+        # Prepare the message
+        MESSAGE="New Substack post: [${{ steps.post-to-discord.outputs.title }}](${ { steps.post-to-discord.outputs.link }})."
+
+        # Send to Discord
+        curl -X POST $DISCORD_WEBHOOK_URL \
+          -H "Content-Type: application/json" \
+          -d "{\"content\": \"$MESSAGE\"}"
